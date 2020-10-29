@@ -66,7 +66,29 @@ class Ball():
 
 
 class Table():
-    pass
+    """
+    Управляет подсчетом очков и показом их игроку.
+    """
+    def __init__(self, targets_hit=0, balls_used=0):
+        self.targets_hit = targets_hit
+        self.balls_used = balls_used
+        self.score = max(0, self.targets_hit - self.balls_used)
+
+    def draw(self, screen):
+        self.score = max(0, self.targets_hit - self.balls_used)
+
+        font = pg.font.SysFont('Arial', 30)
+
+        text_targets_hit = font.render("Поражено мишений: " + str(self.targets_hit),
+                                       False, (200, 200, 200))
+        text_balls_used = font.render("Использовано мячей: " + str(self.balls_used),
+                                      False, (200, 200, 200))
+        text_score = font.render("Счёт: " + str(self.score),
+                                 False, (200, 200, 200))
+        screen.blit(text_targets_hit, (0, 0))
+        screen.blit(text_balls_used, (0, 50))
+        screen.blit(text_score, (0, 100))
+
 
 class Gun():
     """
@@ -117,7 +139,32 @@ class Gun():
 
 
 class Target():
-    pass
+    """
+    Создает мишени, управляет их столкновениями с шарами, рендерингом.
+    """
+    def __init__(self, coord, rad=30, color=None):
+        """
+        Создает мишень с заданными начальными условиями.
+        """
+        if color is None:
+            color = (randint(0, 255), randint(0, 255), randint(0, 255))
+        self.color = color
+        self.coord = coord
+        self.rad = rad
+        self.is_alive = True
+
+    def draw(self, screen):
+        """
+        Рисует мишень на экране.
+        """
+        pg.draw.circle(screen, self.color, self.coord, self.rad)
+
+    def check_collision(self, ball):
+        """
+        Проверяет, столкнулся ли мяч с мишенью.
+        """
+        distance = (sum((ball.coord[i] - self.coord[i])**2 for i in range(2)))**0.5
+        return distance <= self.rad + ball.rad
 
 
 class Manager():
@@ -141,10 +188,18 @@ class Manager():
         """
         Управляет игрой. Если все цели были поражены, создает новые.
         """
-        done = self.handle_events(events)
+        self.handle_events(events)
+
+        if len(self.targets) == 0 and len(self.balls) == 0:
+            radius = max(int(30 - self.table.score), 3)
+            self.targets = [Target([randint(100, SCREEN_SIZE[0] - 30),
+                                    randint(30, SCREEN_SIZE[1] - 30)],
+                                   rad=radius) for i in range(3)]
+
+        self.check_collisions()
+        self.check_alive()
         self.move()
         self.draw(screen)
-        self.check_alive()
         return done
 
     def draw(self, screen):
@@ -152,9 +207,12 @@ class Manager():
         Рисует все объекты, которые нужно нарисовать на экране.
         """
         screen.fill(BLACK)
+        self.gun.draw(screen)
         for ball in self.balls:
             ball.draw(screen)
-        self.gun.draw(screen)
+        for target in self.targets:
+            target.draw(screen)
+        self.table.draw(screen)
 
     def move(self):
         """
@@ -178,7 +236,7 @@ class Manager():
             
     def check_collisions(self):
         """
-        Проверяет, попали ли мячи в какие-то цели.
+        Проверяет, попали ли мячи в какие-то мишени.
         """
         for target in self.targets:
             for ball in self.balls:
@@ -205,7 +263,8 @@ class Manager():
             elif event.type == pg.MOUSEBUTTONUP:
                 if event.button == 1:
                     self.balls.append(self.gun.strike())
-        
+                    self.table.balls_used += 1
+                    
         if pg.mouse.get_focused():
             mouse_pos = pg.mouse.get_pos()
             self.gun.set_angle(mouse_pos)
