@@ -65,37 +65,13 @@ class Ball():
         self.vel = ans.astype(np.int).tolist()
 
 
-class Table():
-    """
-    Управляет подсчетом очков и показом их игроку.
-    """
-    def __init__(self, targets_hit=0, balls_used=0):
-        self.targets_hit = targets_hit
-        self.balls_used = balls_used
-        self.score = max(0, self.targets_hit - self.balls_used)
-
-    def draw(self, screen):
-        self.score = max(0, self.targets_hit - self.balls_used)
-
-        font = pg.font.SysFont('Arial', 30)
-
-        text_targets_hit = font.render("Поражено мишений: " + str(self.targets_hit),
-                                       False, (200, 200, 200))
-        text_balls_used = font.render("Использовано мячей: " + str(self.balls_used),
-                                      False, (200, 200, 200))
-        text_score = font.render("Счёт: " + str(self.score),
-                                 False, (200, 200, 200))
-        screen.blit(text_targets_hit, (0, 0))
-        screen.blit(text_balls_used, (0, 50))
-        screen.blit(text_score, (0, 100))
-
 
 class Gun():
     """
     Создает пушку, управляет её движениями, стрельбой, прицеливанием и рендерингом.
     """
     def __init__(self, coord=[30, SCREEN_SIZE[1]//2], 
-                 min_pow=20, max_pow=50):
+                 min_pow=30, max_pow=60):
         """
         Создает пушку с заданными начальными условиями.
         """
@@ -166,6 +142,30 @@ class Target():
         distance = (sum((ball.coord[i] - self.coord[i])**2 for i in range(2)))**0.5
         return distance <= self.rad + ball.rad
 
+class Table():
+    """
+    Управляет подсчетом очков и показом их игроку.
+    """
+    def __init__(self, targets_hit=0, balls_used=0):
+        self.targets_hit = targets_hit
+        self.balls_used = balls_used
+        self.score = max(0, self.targets_hit - self.balls_used)
+
+    def draw(self, screen):
+        self.score = max(0, self.targets_hit - self.balls_used)
+
+        font = pg.font.SysFont('Arial', 30)
+
+        text_targets_hit = font.render("Поражено мишений: " + str(self.targets_hit),
+                                       False, (200, 200, 200))
+        text_balls_used = font.render("Использовано мячей: " + str(self.balls_used),
+                                      False, (200, 200, 200))
+        text_score = font.render("Счёт: " + str(self.score),
+                                 False, (200, 200, 200))
+        screen.blit(text_targets_hit, (0, 0))
+        screen.blit(text_balls_used, (0, 50))
+        screen.blit(text_score, (0, 100))
+
 
 class Manager():
     """
@@ -230,9 +230,14 @@ class Manager():
         for i, ball in enumerate(self.balls):
             if not ball.is_alive:
                 dead_balls.append(i)
-
         for i in reversed(dead_balls):
             self.balls.pop(i)
+        dead_targets = []
+        for i, target in enumerate(self.targets):
+            if not target.is_alive:
+                dead_targets.append(i)
+        for i in reversed(dead_targets):
+            self.targets.pop(i)
             
     def check_collisions(self):
         """
@@ -281,8 +286,8 @@ mgr = Manager()
 done = False
 
 while not done:
-    clock.tick(15)
+    clock.tick(30)
 
     done = mgr.process(pg.event.get(), screen)
-
+    
     pg.display.flip()
